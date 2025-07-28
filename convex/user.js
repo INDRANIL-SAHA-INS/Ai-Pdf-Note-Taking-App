@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const addUser = mutation({
@@ -36,5 +36,19 @@ export const addUser = mutation({
     });
     console.log("New user created with ID:", userId);
     return userId;
+  },
+});
+
+// Query to find user by email (to get Convex user ID)
+export const getUserByEmail = query({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    return user;
   },
 });

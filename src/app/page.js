@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { api } from "../../convex/_generated/api";
 
 export default function Home() {
-  const { user } = useUser();
+  const { user } = useUser();// Clerk for user management
   const adduser = useMutation(api.user.addUser);
   useEffect(() => {
     if (user) {

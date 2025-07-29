@@ -13,41 +13,41 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button";
 import { Loader2Icon } from 'lucide-react';
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { v4 as uuidv4 } from 'uuid';
-import { useUser } from "@clerk/nextjs"; // Import Clerk's useUser hook
+import { useUser } from "@clerk/nextjs";
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const UplodPdfDialog = ({children}) => {
-  // Get the user first (this must come before useQuery)
-  const { user } = useUser(); //Clerk for user management
-
-  // Import the mutations
+  const { user } = useUser();
+  const router = useRouter();
+  
   const generateUploadUrl = useMutation(api.PdfStorage.generateUploadUrl);
   const savePdfFile = useMutation(api.PdfStorage.savePdfFile);
   const getFileUrl = useMutation(api.PdfStorage.getFileUrl);
+  const embedding_documents = useAction(api.action.ingest);
   
-  // Get Convex user by email (this comes after user is available)
   const convexUser = useQuery(api.user.getUserByEmail, 
     user?.primaryEmailAddress?.emailAddress ? 
     { email: user.primaryEmailAddress.emailAddress } : 
     "skip"
   );
 
-  // State to manage loading, selected file, and filename
   const [Loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
+  const [open, setOpen] = useState(false); // ✅ Added state for dialog control
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
-      
-      // Auto-fill filename without extension
       setFileName(file.name.replace('.pdf', ''));
     }
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile || !fileName) {
@@ -59,7 +59,6 @@ const UplodPdfDialog = ({children}) => {
     
     try {
       // Step 1: Generate upload URL
-      // This function creates a unique URL for uploading the PDF file
       const uploadUrl = await generateUploadUrl();
       if (!uploadUrl) {
         throw new Error("Failed to generate upload URL.");
@@ -68,7 +67,7 @@ const UplodPdfDialog = ({children}) => {
       // Step 2: Upload file to Convex storage
       const response = await fetch(uploadUrl, {
         method: "POST",
-        body: selectedFile, // Send the file directly, not FormData
+        body: selectedFile,
       });
 
       if (!response.ok) {
@@ -83,102 +82,126 @@ const UplodPdfDialog = ({children}) => {
         throw new Error("User not found in database. Please make sure you're signed up.");
       }
    
-      const convexUserId = convexUser._id; // This is the correct Convex user ID
+      const convexUserId = convexUser._id;
       const usernamePlaceholder = user.username;
-      console.log("Clerk user:", user);
-      console.log("Convex user:", convexUser);
-      console.log("Using Convex user ID:", convexUserId);
-      
-      const fileid = uuidv4(); // Generate a unique file ID
-      // Get the file URL after saving the file
+      const fileid = uuidv4();
      
-      const fileurl= await getFileUrl({
+      const fileurl = await getFileUrl({
         storageId: storageId,
       });
+
       const pdfFileId = await savePdfFile({
         fileId: fileid,
         storageId: storageId,
-        createdBy: convexUserId, // Use Convex user ID, not Clerk ID
+        createdBy: convexUserId,
         fileName: fileName ?? "Untitled",
         fileUrl: fileurl,
         username: usernamePlaceholder,
         createdAt: Date.now(),
       });
 
-      alert("File uploaded and saved successfully!");
-      console.log("PDF file saved to database with ID:", pdfFileId);
+      // Step 4: Process and embed the document
+      console.log('Processing PDF for embeddings...');
+      const url = `/api/pdf-loader?pdfurl=${encodeURIComponent(fileurl)}`;
+      const pdfResponse = await axios.get(url);
+      
+      // Call embedding action
+      const result = await embedding_documents({
+        splittext: pdfResponse.data.texts,
+        fileId: fileid
+      });
+      
+      console.log('Embedding Documents Result:', result);
+      
+      // ✅ Close dialog automatically on success
+      setOpen(false);
+      
+      // ✅ Reset form state
+      setSelectedFile(null);
+      setFileName('');
+      
+      // ✅ Redirect to workspace or dashboard
+      router.push('/dashboard'); // Change this to your desired route
+      
+      alert("File uploaded and embeddings created successfully!");
 
     } catch (error) {
       console.error("Upload error:", error);
       alert(error.message || "Upload failed. Please try again.");
     } finally {
       setLoading(false);
-      setSelectedFile(null);
-      setFileName('');
     }
   };
+
   return (
     <div>
-      <Dialog>
-  <DialogTrigger asChild>{children}</DialogTrigger>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Select a file to upload</DialogTitle>
-      <DialogDescription asChild>
-        <div>
-          <div className='rounded-md p-3 border-2 border-dashed border-gray-300 mt-5'>
-            <input 
-              type="file" 
-              accept="application/pdf" 
-              id="file-upload"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <label 
-              htmlFor="file-upload" 
-              className="cursor-pointer p-2 border border-black rounded-md hover:bg-gray-200 inline-block"
-            >
-              Choose a file
-            </label>
-            
-            {selectedFile && (
-              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-700">
-                  ✓ Selected: <span className="font-medium">{selectedFile.name}</span>
-                </p>
-                <p className="text-xs text-green-600">
-                  Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
+      <Dialog open={open} onOpenChange={setOpen}> {/* ✅ Added open state control */}
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select a file to upload</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                <div className='rounded-md p-3 border-2 border-dashed border-gray-300 mt-5'>
+                  <input 
+                    type="file" 
+                    accept="application/pdf" 
+                    id="file-upload"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={Loading} // ✅ Disable file input during loading
+                  />
+                  <label 
+                    htmlFor="file-upload" 
+                    className={`cursor-pointer p-2 border border-black rounded-md hover:bg-gray-200 inline-block ${Loading ? 'opacity-50 cursor-not-allowed' : ''}`} // ✅ Visual feedback when disabled
+                  >
+                    Choose a file
+                  </label>
+                  
+                  {selectedFile && (
+                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm text-green-700">
+                        ✓ Selected: <span className="font-medium">{selectedFile.name}</span>
+                      </p>
+                      <p className="text-xs text-green-600">
+                        Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!selectedFile && (
+                    <p className="text-sm text-gray-500 mt-2">No file selected</p>
+                  )}
+                </div>
+                <div className='mt-3'>
+                  <label className=''>Filename*</label>
+                  <Input 
+                    placeholder="Enter filename" 
+                    className="border border-gray-300 rounded-md p-2 w-full mt-2" 
+                    value={fileName}
+                    onChange={(e) => setFileName(e.target.value)}
+                    disabled={Loading} // ✅ Disable input during loading
+                  />
+                </div>
               </div>
-            )}
-            
-            {!selectedFile && (
-              <p className="text-sm text-gray-500 mt-2">No file selected</p>
-            )}
-          </div>
-          <div className='mt-3'>
-            <label className=''>Filename*</label>
-            <Input 
-              placeholder="Enter filename" 
-              className="border border-gray-300 rounded-md p-2 w-full mt-2" 
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-            />
-          </div>
-        </div>
-      </DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" disabled={Loading}> {/* ✅ Disable cancel during loading */}
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit" onClick={handleSubmit} >{Loading ? <Loader2Icon className='animate-spin'/> : "Upload"}</Button>
+            <Button 
+              type="submit" 
+              onClick={handleSubmit}
+              disabled={Loading || !selectedFile || !fileName} // ✅ Disable upload button when loading or form incomplete
+            >
+              {Loading ? <Loader2Icon className='animate-spin'/> : "Upload"}
+            </Button>
           </DialogFooter>
-
-
-  </DialogContent>
-</Dialog>
-      
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

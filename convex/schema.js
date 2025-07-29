@@ -23,4 +23,15 @@ export default defineSchema({
     .index("by_created_by", ["createdBy"])
     .index("by_file_name", ["fileName"])
     .index("by_storage_id", ["storageId"]),
+
+
+   
+  embedding_documents: defineTable({
+    embedding: v.array(v.number()),
+    text: v.string(),
+    metadata: v.any(),
+  }).vectorIndex("byEmbedding", {
+    vectorField: "embedding",
+    dimensions: 768,
+  })
 });

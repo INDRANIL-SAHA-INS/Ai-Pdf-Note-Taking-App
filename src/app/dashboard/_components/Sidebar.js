@@ -1,16 +1,22 @@
-
+"use client"
 import React from 'react'
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Layout, Shield } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import UplodPdfDialog from './UplodPdfDialogue';
+import axios from 'axios';
 
 
 const Sidebar = () => {
+ 
+  
+
   return (
     <div className='shadow-md h-screen p-7'>
       <Image src={"/logo.svg"} alt="Logo" width={170} height={170} />
+
+
       <div className='mt-10'>
         
         <UplodPdfDialog>
@@ -24,7 +30,10 @@ const Sidebar = () => {
           <Shield className='' />
           <h2>Upgrade</h2>
         </div>
+     
       </div>
+
+
       <div className=' bg-amber-200 absolute bottom-20 p-2 w-[80%]'>
         <Progress value={33} />
         <p className='text-sm mt-1'>2 Out Of 5 Pdf Uploaded</p>

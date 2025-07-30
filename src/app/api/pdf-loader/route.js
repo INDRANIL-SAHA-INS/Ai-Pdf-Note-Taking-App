@@ -36,8 +36,8 @@ export async function GET(request) {
 
     // Step 5: Split cleaned content into smaller chunks
     const textSplitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 200
+      chunkSize: 300,      // Smaller chunk size for more precise retrieval
+      chunkOverlap: 50     // Smaller overlap for context
     });
     const splitContents = await textSplitter.splitDocuments(cleanedDocs);
 

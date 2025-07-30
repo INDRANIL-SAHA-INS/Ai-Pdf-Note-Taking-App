@@ -53,3 +53,19 @@ export const getFileUrl = mutation({
   },
 });
 
+export const getfilerecord = query({
+  args: { fileId: v.string() },
+  handler: async (ctx, args) => {
+    // Fetch the file metadata from the database by fileId field
+    const fileRecord = await ctx.db
+      .query("pdfFiles")
+      .filter((q) => q.eq(q.field("fileId"), args.fileId))
+      .first();
+
+    if (!fileRecord) {
+      throw new Error("File not found");
+    }
+
+    return fileRecord;
+  },
+});

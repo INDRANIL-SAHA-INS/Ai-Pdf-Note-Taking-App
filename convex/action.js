@@ -12,9 +12,12 @@ export const ingest = action({
     fileId: v.string(),
   },
   handler: async (ctx, args) => {
+    // Create metadata array for each chunk
+    const metadataArray = args.splittext.map(() => ({ fileid: args.fileId }));
+
     await ConvexVectorStore.fromTexts(
-      args.splittext, // ✅ Use the split text directly
-      args.fileId, // ✅ Use the fileId directly
+      args.splittext,
+      metadataArray, // Pass array of metadata objects
       new GoogleGenerativeAIEmbeddings({
         apiKey: process.env.GOOGLE_GENAI_API_KEY,
         model: "text-embedding-004",
@@ -23,11 +26,10 @@ export const ingest = action({
       }),
       { 
         ctx,
-        table: "embedding_documents" // ✅ Specify your custom table name
+        table: "embedding_documents"
       }
     );
     
-    // ✅ Return success message
     return {
       success: true,
       message: "Documents successfully embedded and stored",
@@ -35,4 +37,32 @@ export const ingest = action({
       chunksProcessed: args.splittext.length
     };
   },
+});
+
+export const search = action({
+  args: {
+    query: v.string(),
+    fileId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const vectorStore = new ConvexVectorStore(
+      new GoogleGenerativeAIEmbeddings({
+        apiKey: process.env.GOOGLE_GENAI_API_KEY,
+        model: "text-embedding-004",
+        taskType: TaskType.RETRIEVAL_DOCUMENT,
+        title: "Document Search",
+      }),
+      {
+        ctx,
+        table: "embedding_documents",
+    }
+  );
+
+  const results = await vectorStore.similaritySearch(args.query, 1);
+  console.log(results);
+
+  const filteredResults = results.filter(doc => doc.metadata?.fileid === args.fileId);
+
+  return JSON.stringify(filteredResults);
+}
 });

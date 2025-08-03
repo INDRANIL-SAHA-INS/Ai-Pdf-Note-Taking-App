@@ -6,6 +6,7 @@ import { Layout, Shield } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import UplodPdfDialog from './UplodPdfDialogue';
 import axios from 'axios';
+import UploadYoutubeDialoguebox from './uploadYoutbeDialoguebox';
 
 
 const Sidebar = () => {
@@ -22,11 +23,14 @@ const Sidebar = () => {
         <UplodPdfDialog>
           <Button className="w-full"> + Upload Document</Button>
         </UplodPdfDialog>
-        <div className='flex gap-2 items-center p-5 mt-5 bg-amber-200 hover:bg-slate-100 rounded-lg cursor-pointer'>
+        <UploadYoutubeDialoguebox>
+          <Button className="w-full mt-3" >+ Upload YouTube URL</Button>
+        </UploadYoutubeDialoguebox>
+        <div className='flex gap-2 items-center p-5 mt-5  hover:bg-slate-100 rounded-lg cursor-pointer'>
           <Layout className='' />
           <h2>Workspace</h2>
         </div>
-        <div className='flex gap-2 items-center p-5 mt-1 bg-amber-200 hover:bg-slate-100 rounded-lg cursor-pointer'>
+        <div className='flex gap-2 items-center p-5 mt-1  hover:bg-slate-100 rounded-lg cursor-pointer'>
           <Shield className='' />
           <h2>Upgrade</h2>
         </div>
@@ -34,7 +38,7 @@ const Sidebar = () => {
       </div>
 
 
-      <div className=' bg-amber-200 absolute bottom-20 p-2 w-[80%]'>
+      <div className='absolute bottom-20 p-2 w-[80%]'>
         <Progress value={33} />
         <p className='text-sm mt-1'>2 Out Of 5 Pdf Uploaded</p>
         <p className='text-sm mt-2 text-gray-400'>Upgrade to add more Pdfs</p>

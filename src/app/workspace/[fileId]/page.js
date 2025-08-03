@@ -10,6 +10,7 @@ import Tiptap from '../_components/tiptap';
 
 const Workspace = () => {
   const {fileId} = useParams()
+  // Fetch file information using the fileId
   const getfileinfo = useQuery(api.PdfStorage.getfilerecord, { fileId });
   
   useEffect(() => {
@@ -45,13 +46,13 @@ const Workspace = () => {
 
   return (
     <div className="">
-      <WorkspaceHeader />   
-      <div className='grid grid-cols-2 gap-4'>
+      <WorkspaceHeader FilName={getfileinfo.fileName}/>   
+      <div className='grid grid-cols-2 gap-4 mt-1'>
         <div className='h-[90vh]'>
           <Tiptap />
 
         </div>
-        <div  className='bg-yellow-400 h-[90vh]'>
+        <div  className='h-[90vh] mt-1'>
           <Pdfviewer fileUrl={getfileinfo.fileUrl} />
 
         </div>
@@ -61,4 +62,4 @@ const Workspace = () => {
   )
 }
 
-export default Workspace
+export default Workspace 

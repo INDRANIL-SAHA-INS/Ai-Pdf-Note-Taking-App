@@ -63,7 +63,6 @@ const UplodPdfDialog = ({children}) => {
       if (!uploadUrl) {
         throw new Error("Failed to generate upload URL.");
       }
-
       // Step 2: Upload file to Convex storage
       const response = await fetch(uploadUrl, {
         method: "POST",

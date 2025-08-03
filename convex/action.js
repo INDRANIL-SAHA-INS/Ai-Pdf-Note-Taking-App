@@ -58,11 +58,18 @@ export const search = action({
     }
   );
 
-  const results = await vectorStore.similaritySearch(args.query, 1);
+  const results = await vectorStore.similaritySearch(args.query, 3);
   console.log(results);
 
   const filteredResults = results.filter(doc => doc.metadata?.fileid === args.fileId);
 
-  return JSON.stringify(filteredResults);
+  // Extract only pageContent from each result
+  const pageContents = filteredResults.map(doc => doc.pageContent);
+  console.log("This is my pageContents:", pageContents);
+
+  // Store the final result as a string
+  const finalResult = JSON.stringify(pageContents);
+
+  return finalResult;
 }
 });

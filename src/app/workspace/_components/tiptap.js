@@ -39,15 +39,20 @@ const Tiptap = () => {
     immediatelyRender: false,
   })
 
+  
+
   return (
-   <div>
     <div>
-      <Editorextension editor={editor} />
+      <div>
+        <Editorextension editor={editor} />
+      </div>
+      <div
+        className="h-[80vh] overflow-y-auto overflow-x-hidden custom-scrollbar"
+      >
+        <EditorContent editor={editor} />
+      </div>
+
     </div>
-     <div className="h-full">
-      <EditorContent editor={editor} />
-    </div>
-   </div>
   )
 }
 

@@ -16,7 +16,8 @@ export const savePdfFile = mutation({
     fileName: v.string(),
     username: v.string(),
     createdAt: v.number(),
-    fileUrl: v.string(), // Add fileUrl to the arguments
+    fileUrl: v.string(),
+    useremail: v.string(),
   },
   handler: async (ctx, args) => {
     // Save PDF file metadata to database
@@ -28,6 +29,7 @@ export const savePdfFile = mutation({
       username: args.username,
       createdAt: args.createdAt,
       fileUrl: args.fileUrl,
+      useremail: args.useremail,
     });
     
     return pdfFileId;
@@ -67,5 +69,16 @@ export const getfilerecord = query({
     }
 
     return fileRecord;
+  },
+});
+export const getPdfFilesByUser_email = query({
+  args: { useremail: v.string() },
+  handler: async (ctx, args) => {
+    // Find all pdfFiles where useremail matches the given email
+    const files = await ctx.db
+      .query("pdfFiles")
+      .filter(q => q.eq(q.field("useremail"), args.useremail))
+      .collect();
+    return files;
   },
 });

@@ -32,6 +32,7 @@ export const insertTranscriptEmbeddings = internalMutation({
       wordCount: args.wordCount,
       speakingRate: args.speakingRate,
       createdAt: args.createdAt,
+      metadata: { fileId: args.fileId }, // <-- Add this line
     });
   },
 });

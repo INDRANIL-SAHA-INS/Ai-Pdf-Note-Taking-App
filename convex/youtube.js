@@ -33,3 +33,16 @@ export const getYoutubeVideoById = query({
     return video;
   },
 });
+
+// Query to fetch all YouTube videos for a particular user by matching the createdBy field (email)
+export const getYoutubeVideosByEmail = query({
+  args: { createdBy: v.string() },
+  handler: async (ctx, args) => {
+    const videos = await ctx.db
+      .query("youtubeVideos")
+      .filter(q => q.eq(q.field("createdBy"), args.createdBy))
+      .collect();
+    return videos;
+  },
+});
+

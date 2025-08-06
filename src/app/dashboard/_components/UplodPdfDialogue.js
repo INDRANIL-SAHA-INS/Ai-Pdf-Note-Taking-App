@@ -84,7 +84,8 @@ const UplodPdfDialog = ({children}) => {
       const convexUserId = convexUser._id;
       const usernamePlaceholder = user.username;
       const fileid = uuidv4();
-     
+      const usremail= user.primaryEmailAddress?.emailAddress || "<Email>";
+
       const fileurl = await getFileUrl({
         storageId: storageId,
       });
@@ -97,14 +98,37 @@ const UplodPdfDialog = ({children}) => {
         fileUrl: fileurl,
         username: usernamePlaceholder,
         createdAt: Date.now(),
+        useremail: usremail, // Use user's email
       });
 
       // Step 4: Process and embed the document
       console.log('Processing PDF for embeddings...');
       const url = `/api/pdf-loader?pdfurl=${encodeURIComponent(fileurl)}`;
+      console.log('PDF Loader URL:', url);
+      
       const pdfResponse = await axios.get(url);
+      console.log('PDF Response status:', pdfResponse.status);
+      console.log('PDF Response data type:', typeof pdfResponse.data);
+      console.log('PDF Response data structure:', Object.keys(pdfResponse.data));
+      console.log('Text chunks count:', pdfResponse.data.texts ? pdfResponse.data.texts.length : 0);
+      console.log('First few text chunks sample:', pdfResponse.data.texts ? pdfResponse.data.texts.slice(0, 2) : 'No texts available');
+      
+      // Check for error in the response
+      if (pdfResponse.data.error) {
+        console.error('Error from PDF processing:', pdfResponse.data.error);
+        throw new Error(pdfResponse.data.error);
+      }
+      
+      // Validate text chunks before embedding
+      if (!pdfResponse.data.texts || pdfResponse.data.texts.length === 0) {
+        console.error('No text chunks extracted from PDF. Cannot proceed with embedding.');
+        throw new Error('Failed to extract text from PDF. The document might be scanned/image-based without text layers or secured. Please try a different PDF document with selectable text.');
+      }
       
       // Call embedding action
+      console.log('Calling embedding action with file ID:', fileid);
+      console.log('Text chunks being sent for embedding:', pdfResponse.data.texts.length);
+      
       const result = await embedding_documents({
         splittext: pdfResponse.data.texts,
         fileId: fileid
@@ -127,6 +151,18 @@ const UplodPdfDialog = ({children}) => {
     } catch (error) {
       console.error("Upload error:", error);
       alert(error.message || "Upload failed. Please try again.");
+      
+      // ✅ Store metadata even if embedding fails
+      // This allows us to list the file but mark it as unprocessed
+      if (pdfFileId) {
+        try {
+          // You could update the file record to mark it as having embedding issues
+          // This is optional but helpful for debugging and user feedback
+          console.log("File saved but embedding failed. File ID:", pdfFileId);
+        } catch (e) {
+          console.error("Error updating file record:", e);
+        }
+      }
     } finally {
       setLoading(false);
     }

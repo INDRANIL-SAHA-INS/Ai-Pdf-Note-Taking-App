@@ -7,23 +7,25 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { toast } from "sonner"
 import { Toaster } from "sonner"
 import { useUser } from '@clerk/nextjs';
+import axios from 'axios';
 
 const FONT_SIZES = ['12px', '16px', '20px', '24px', '28px', '32px']
 
 
 const Editorextension = ({ editor }) => {
-  const { fileId } = useParams();
+  const params = useParams();
+  const { fileId, youtubeurlid } = params;
   const { user } = useUser();
   const searchAction = useAction(api.action.search);
+  const searchYoutubeTranscriptEmbeddings = useAction(api.youtubeEmbeddings.searchYoutubeTranscriptEmbeddings);
   const saveEditorContent = useMutation(api.editordata.upsertEditorData);
-  // Fetch existing editor data for this fileId
+  // Fetch existing editor data for this fileId or youtubeurlid
   const existingEditorData = useQuery(
     api.editordata.getEditorDataByFileId,
-    fileId ? { fileId } : "skip"
+    fileId ? { fileId } : youtubeurlid ? { fileId: youtubeurlid } : "skip"
   );
 
   const CallAi = async () => {
-
     toast("Ai is getting your answer...", {
       position: "top-right",
       style: {
@@ -37,63 +39,83 @@ const Editorextension = ({ editor }) => {
       }
     })
 
-  if (!editor) return;
-  const { from, to } = editor.state.selection;
-  const selectedText = editor.state.doc.textBetween(from, to, ' ');
-  console.log("Selected text:", selectedText);
-
-  try {
-    const result = await searchAction({
-      query: selectedText,
-      fileId: fileId,
-    });
-
-    const prompt = `Based solely on the following context: ${result}. Please answer the query: "${selectedText}". Provide the answer in HTML format and include the source of the information.`;
-    const groqResponse = await fetch("/api/groq", {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    const selectedText = editor.state.doc.textBetween(from, to, ' ');
+    console.log("Selected text:", selectedText);
+    const queryTypeResponse = await fetch('/api/groq', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: prompt },
-        ],
-        model: "llama-3.3-70b-versatile"
+        query: selectedText
       })
     });
+    const queryTypeData = await queryTypeResponse.json();
+    console.log("Query type response:", queryTypeData);
 
-    if (!groqResponse.ok) {
-      throw new Error(`Groq API error: ${groqResponse.status}`);
-    }
-
-    const groqData = await groqResponse.json();
-
-    if (groqData.error) {
-      throw new Error(`Groq API error: ${groqData.error}`);
-    }
-
-    console.log("Groq output:", groqData.content);
-    // Append new answer to the end of existing editor content, on a new line
-    if (editor && typeof groqData.content === "string") {
-      const currentHtml = editor.getHTML();
-      const answerHtml = `<p><strong>Answer: </strong> ${groqData.content}</p>`;
-      // If editor is empty, just set the answer
-      if (!currentHtml || currentHtml === '<p></p>') {
-        editor.commands.setContent(answerHtml, false, { parseOptions: { preserveWhitespace: true } });
+    try {
+      let result;
+      if (fileId) {
+        result = await searchAction({
+          query: selectedText,
+          fileId: fileId,
+          queryType: queryTypeData?.type || "general_question"
+        });
+      } else if (youtubeurlid) {
+        result = await searchYoutubeTranscriptEmbeddings({
+          query: selectedText,
+          fileId: youtubeurlid,
+          queryType: queryTypeData?.type || "general_question"
+        });
       } else {
-        // Otherwise, append the answer after existing content
-        // Remove trailing </p> if present to avoid double breaks
-        const newHtml = currentHtml.endsWith('</p>')
-          ? currentHtml + answerHtml
-          : currentHtml + '<br />' + answerHtml;
-        editor.commands.setContent(newHtml, false, { parseOptions: { preserveWhitespace: true } });
+        throw new Error("No fileId or youtubeurlid provided in params.");
       }
+
+      const prompt = `Based solely on the following context: ${result}. Please answer the query: "${selectedText}". Provide the answer in HTML format and include the source of the information.`;
+      const groqResponse = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: prompt },
+          ],
+          model: "llama-3.3-70b-versatile"
+        })
+      });
+
+      if (!groqResponse.ok) {
+        throw new Error(`Groq API error: ${groqResponse.status}`);
+      }
+
+      const groqData = await groqResponse.json();
+
+      if (groqData.error) {
+        throw new Error(`Groq API error: ${groqData.error}`);
+      }
+
+      console.log("Groq output:", groqData.content);
+      // Append new answer to the end of existing editor content, on a new line
+      if (editor && typeof groqData.content === "string") {
+        const currentHtml = editor.getHTML();
+        const answerHtml = `<p><strong>Answer: </strong> ${groqData.content}</p>`;
+        // If editor is empty, just set the answer
+        if (!currentHtml || currentHtml === '<p></p>') {
+          editor.commands.setContent(answerHtml, false, { parseOptions: { preserveWhitespace: true } });
+        } else {
+          // Otherwise, append the answer after existing content
+          // Remove trailing </p> if present to avoid double breaks
+          const newHtml = currentHtml.endsWith('</p>')
+            ? currentHtml + answerHtml
+            : currentHtml + '<br />' + answerHtml;
+          editor.commands.setContent(newHtml, false, { parseOptions: { preserveWhitespace: true } });
+        }
+      }
+      return groqData.content;
+    } catch (error) {
+      console.error("Error:", error);
     }
-    return groqData.content;
-      
-  } catch (error) {
-    console.error("Error:", error);
   }
-}
 // Update editor state on every change
   const [, setEditorState] = useState(0)
 
@@ -117,7 +139,7 @@ const Editorextension = ({ editor }) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         saveEditorContent({
-          fileId,
+          fileId: fileId || youtubeurlid,
           createdBy: user?.primaryEmailAddress?.emailAddress || "unknown_user",
           data: editor.getHTML(),
           createdAt: Date.now(),

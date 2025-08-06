@@ -28,6 +28,7 @@ export default defineSchema({
     createdAt: v.number(),
     username: v.string(),
     fileUrl: v.string(),
+    useremail: v.string(), // Add email field for user
 
   })
     .index("by_created_by", ["createdBy"])
@@ -61,7 +62,7 @@ export default defineSchema({
     chunkId: v.number(), // Index of the chunk (0, 1, 2, ...)
     text: v.string(), // Raw chunk text
     embeddingText: v.string(), // Text formatted for embedding
-    embedding: v.any(), // Embedding vector (array of floats)
+    embedding: v.array(v.number()), // Embedding vector (array of floats)
 
     // Timestamp information
     start: v.number(), // Start time in seconds
@@ -74,7 +75,12 @@ export default defineSchema({
     speakingRate: v.number(),
 
     createdAt: v.number(), // Timestamp (Date.now())
+    metadata: v.any(), // Additional metadata if needed
   })
     .index("by_fileId", ["fileId"])
-    .index("by_chunkId", ["chunkId"]),
+    .index("by_chunkId", ["chunkId"])
+    .vectorIndex("byEmbedding", {
+      vectorField: "embedding",
+      dimensions: 768, // Change to 1536 if your model uses that size
+    }),
 });

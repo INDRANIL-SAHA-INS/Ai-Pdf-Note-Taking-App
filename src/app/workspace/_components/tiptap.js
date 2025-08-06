@@ -8,6 +8,7 @@ import Underline from '@tiptap/extension-underline'
 import { FontSize, TextStyle } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import { BulletList, OrderedList, ListItem } from '@tiptap/extension-list'
+import Link from '@tiptap/extension-link';
 
 import Editorextension from '../_components/editorextension'
 
@@ -28,6 +29,13 @@ const Tiptap = () => {
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
+      }),
+      Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer nofollow',
+          target: '_blank',
+        },
       }),
     ],
     content: '',

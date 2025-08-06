@@ -15,6 +15,11 @@ export default function Home() {
     }
   }, [user]);
   const handleAddUser = async () => {
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      console.log("No email found for user, skipping user creation");
+      return;
+    }
+    
     try {
       const username = user?.username || 
                       user?.firstName || 
@@ -23,10 +28,10 @@ export default function Home() {
                       
       await adduser({
         username: username,
-        email: user?.primaryEmailAddress?.emailAddress || "",
+        email: user?.primaryEmailAddress?.emailAddress,
         imageUrl: user?.imageUrl,
       });
-      console.log("User added successfully!");
+      console.log("User added/updated successfully!");
     } catch (error) {
       console.error("Error adding user:", error);
     }

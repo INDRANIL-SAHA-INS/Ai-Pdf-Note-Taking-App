@@ -15,7 +15,8 @@ export const addUser = mutation({
       .first();
 
     if (existingUserByEmail) {
-      throw new Error("User with this email already exists");
+      console.log("User with this email already exists, returning existing ID:", existingUserByEmail._id);
+      return existingUserByEmail._id;
     }
 
     // Check if username is already taken

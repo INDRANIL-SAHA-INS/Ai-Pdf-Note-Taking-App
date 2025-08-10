@@ -46,7 +46,7 @@ const Workspace = () => {
 
   return (
     <div className="">
-      <WorkspaceHeader FilName={getfileinfo.fileName}/>   
+      <WorkspaceHeader FilName={getfileinfo.fileName} fileId={fileId} />
       <div className='grid grid-cols-2 gap-4 mt-1'>
         <div className='h-[90vh]'>
           <Tiptap />

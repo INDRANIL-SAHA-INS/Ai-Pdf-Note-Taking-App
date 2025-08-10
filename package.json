@@ -42,7 +42,8 @@
     "tailwind-merge": "^3.3.1",
     "uuidv4": "^6.2.13",
     "youtube-transcript": "^1.2.1",
-    "yt-transcript": "^0.0.2"
+    "yt-transcript": "^0.0.2",
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

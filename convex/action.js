@@ -128,6 +128,10 @@ export const search = action({
         console.log("Matched case: instruction");
         pageContents = await retrieveTopKChunks(vectorStore, args, 18);
         break;
+      case "take test":
+        console.log("Matched case: take test");
+        pageContents = await retrieveTopKChunks(vectorStore, args);
+        break;
       case "other":
         console.log("Matched case: other");
         pageContents = await retrieveTopKChunks(vectorStore, args, 20);
@@ -144,3 +148,5 @@ export const search = action({
     return finalResult;
   }
 });
+
+

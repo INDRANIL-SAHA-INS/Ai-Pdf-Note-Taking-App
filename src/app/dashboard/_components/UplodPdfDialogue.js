@@ -20,12 +20,13 @@ import { useUser } from "@clerk/nextjs";
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
-const UplodPdfDialog = ({children}) => {
+const UplodPdfDialog = ({ children, workspaceId }) => {
   const { user } = useUser();
   const router = useRouter();
   
   const generateUploadUrl = useMutation(api.PdfStorage.generateUploadUrl);
   const savePdfFile = useMutation(api.PdfStorage.savePdfFile);
+  const savePdfFileToWorkspace = useMutation(api.PdfStorage.savePdfFileToWorkspace);
   const getFileUrl = useMutation(api.PdfStorage.getFileUrl);
   const embedding_documents = useAction(api.action.ingest);
   
@@ -90,16 +91,33 @@ const UplodPdfDialog = ({children}) => {
         storageId: storageId,
       });
 
-      const pdfFileId = await savePdfFile({
-        fileId: fileid,
-        storageId: storageId,
-        createdBy: convexUserId,
-        fileName: fileName ?? "Untitled",
-        fileUrl: fileurl,
-        username: usernamePlaceholder,
-        createdAt: Date.now(),
-        useremail: usremail, // Use user's email
-      });
+      // If this is a workspace upload, use the workspace function
+      let pdfFileId;
+      if (workspaceId) {
+        pdfFileId = await savePdfFileToWorkspace({
+          fileId: fileid,
+          storageId: storageId,
+          createdBy: convexUserId,
+          fileName: fileName ?? "Untitled",
+          fileUrl: fileurl,
+          username: usernamePlaceholder,
+          createdAt: Date.now(),
+          useremail: usremail,
+          workspace_id: workspaceId,
+        });
+      } else {
+        // Regular personal upload
+        pdfFileId = await savePdfFile({
+          fileId: fileid,
+          storageId: storageId,
+          createdBy: convexUserId,
+          fileName: fileName ?? "Untitled",
+          fileUrl: fileurl,
+          username: usernamePlaceholder,
+          createdAt: Date.now(),
+          useremail: usremail, // Use user's email
+        });
+      }
 
       // Step 4: Process and embed the document
       console.log('Processing PDF for embeddings...');
@@ -143,8 +161,14 @@ const UplodPdfDialog = ({children}) => {
       setSelectedFile(null);
       setFileName('');
       
-      // ✅ Redirect to workspace or dashboard
-      router.push('/dashboard'); // Change this to your desired route
+      // ✅ Redirect to appropriate page
+      if (workspaceId) {
+        // Stay on the workspace page
+        router.refresh(); // Refresh to show the new file
+      } else {
+        // Go to dashboard
+        router.push('/dashboard');
+      }
       
       alert("File uploaded and embeddings created successfully!");
 
